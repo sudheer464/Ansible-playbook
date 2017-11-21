@@ -1,0 +1,58 @@
+- hosts: ELL
+  sudo: yes
+  tasks:
+      - name: Install latest Updates
+        yum:
+          name: '*'
+          state: latest
+
+      - name: Install useful packages
+        yum:
+          name: wget,elinks,telnet,python-pip,vim,nano,java-1.8.0-openjdk-devel,git,make,cmake
+
+      - name: Install mono key
+        get_url:
+           url: http://keyserver.ubuntu.com/pks/lookup?op=get&search=0x3FA7E0328081BFF6A14DA29AA6A19B38D3D831EF
+           dest: /tmp/GPG-KEY-mono
+           mode: 0440
+
+      - name: import mono key
+        rpm_key:
+          state: present
+          key: /tmp/GPG-KEY-mono
+
+      - name: Add mono repo
+        yum_repository:
+          name: mono
+          description: Mono repository
+          baseurl: http://download.mono-project.com/repo/centos7/
+          gpgkey: http://keyserver.ubuntu.com/pks/lookup?op=get&search=0x3FA7E0328081BFF6A14DA29AA6A19B38D3D831EF
+          gpgcheck: yes
+          enabled: yes
+
+      - name: Install mono
+        yum:
+          name: mono-devel
+
+      - name: Remove the existing "rackspace-monitoring-agent" directory
+        raw: rm -rf rackspace-monitoring-agent
+
+      - name: Cloning...
+        raw: git clone https://github.com/virgo-agent-toolkit/rackspace-monitoring-agent
+
+      - name: Changing into Cloned directory
+        raw: cd rackspace-monitoring-agent
+
+      - name: Reinitialize the GIT 
+        raw: git init
+
+      - make:
+         chdir: /root/rackspace-monitoring-agent
+         target: install
+
+      - name: Rackspace-Monitoring-Agent set up
+        command: rackspace-monitoring-agent --setup --username sudheer.korra --apikey d4c896cf32844e8c95f68f7984761482
+
+      - name: Start the agent in respective clients
+        command: rackspace-monitoring-agent start -D
+
